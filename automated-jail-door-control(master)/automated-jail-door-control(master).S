@@ -9,18 +9,18 @@
 
 main:
   RCALL init_serial
-  RCALL I2C_init
+  ;RCALL I2C_init
 
 again:
   RCALL delay_sec 
-  RCALL I2C_start   ; transmit START condition
-  LDI R27, 0x3E
-  RCALL I2C_write ;write slave address SLA+W
+  ;RCALL I2C_start    ; transmit START condition
+  ;LDI R27, 0x3E      ; address for I2C LCD in Proteus
+  ;RCALL I2C_write    ;write slave address SLA+W
 
   RCALL Read_DHT11  ; subroutine for read DHT11
-  MOV R27, R19
-  RCALL I2C_write ;write data
-  RCALL I2C_stop
+  ;MOV R27, R19
+  ;RCALL I2C_write ;write data
+  ;RCALL I2C_stop
 
   RJMP again ; loop back
 
@@ -28,6 +28,7 @@ again:
 ;                     Read DHT11 Data
 ; DHT11 Pin -> Digital Pin 9 (PB1)
 ;=================================================================
+
 Read_DHT11:
   ;------------------Send Signal Start-------------------
   SBI DDRB, 1 ;pin PB1 as o/p
@@ -48,7 +49,7 @@ Read_DHT11:
   RCALL DHT11_reading ;read integer humidity (1st byte of 40-bit data)
   RCALL DHT11_reading ;read decimal humidity (2nd byte of 40-bit data)
   RCALL DHT11_reading ;read integer temp (3rd byte of 40-bit data)
-  MOV R19, R18
+  MOV R19, R18 
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
   RCALL DHT11_print
   RET
