@@ -9,19 +9,20 @@
 
 main:
   RCALL init_serial
-  ;RCALL I2C_init
+  RCALL I2C_init
+  RCALL LCD_init
+  RCALL delay_sec
 
 again:
   RCALL delay_sec 
-  ;RCALL I2C_start    ; transmit START condition
-  ;LDI R27, 0x3E      ; address for I2C LCD in Proteus
-  ;RCALL I2C_write    ;write slave address SLA+W
+  RCALL I2C_start    ; transmit START condition
+  RCALL Read_DHT11   ; subroutine for read DHT11
 
-  RCALL Read_DHT11  ; subroutine for read DHT11
-  ;MOV R27, R19
-  ;RCALL I2C_write ;write data
-  ;RCALL I2C_stop
-
+  .equ direct, 0     ; means data assigned from register
+  .equ mode, 0xFF    ; mode 0x00 = command write, mode 0xFF = data write
+  MOV R24, R19
+  RCALL LCD_sendChar  
+  
   RJMP again ; loop back
 
 ;=================================================================
@@ -108,6 +109,88 @@ DHT11_print:
   STS UDR0, R16 
   
   RET
+
+
+
+;=================================================================
+;     LCD Subroutines
+;=================================================================
+
+;------------------------------------------------------------
+LCD_init:
+  .equ mode, 0x00   ; mode 0x00 = command write, mode 0xFF = data write
+  .equ direct, 1    ; means data assigned from direct value (from 'value' symbol)
+  .equ value, 0x33
+  RCALL LCD_sendChar
+  RCALL delay_ms
+
+  .equ value, 0x32
+  RCALL LCD_sendChar
+  RCALL delay_ms
+
+  .equ value, 0x28
+  RCALL LCD_sendChar
+  RCALL delay_ms
+
+  .equ value, 0x0C
+  RCALL LCD_sendChar
+  
+  .equ value, 0x01
+  RCALL LCD_sendChar
+  RCALL delay_ms
+
+  .equ value, 0x06
+  RCALL LCD_sendChar
+  RET
+
+
+LCD_sendChar:
+  LDI R26, direct
+  SBRC R26, 1
+  LDI R23, value  ; R23 will store high-nibble
+
+  SBRS R26, 1
+  MOV R23, R24
+  
+  MOV R19, R23    ; R19 will store low-nibble
+  ANDI R23, 0xF0  ; get high-nibble
+  ANDI R19, 0x0F  ; get low-nibble
+
+  ORI R23, mode
+  RCALL send4Bits
+  ORI R19, mode
+  RCALL send4Bits
+  RET
+
+
+; USE R25 TO SEND DATA
+PCF8574_sendByte:
+  RCALL I2C_start   ; send START condition
+  LDI R27, 0x40     ; send write address of PCF8574
+  RCALL I2C_write
+  MOV R27, R25      ; send data byte
+  RCALL I2C_write
+  RCALL I2C_stop    ; send STOP condition
+  RET
+
+send4Bits:
+  MOV R25, R24
+  RCALL PCF8574_sendByte
+
+  MOV R23, R24
+  ORI R23, 0b00000100 
+  MOV R25, R23              ; EN = 1
+  RCALL PCF8574_sendByte        
+  RCALL delay_short         ; 0.45us delay
+
+  MOV R23, R24
+  ANDI R23, ~0b00000100 
+  MOV R25, R24              ; EN = 0
+  RCALL PCF8574_sendByte
+  RCALL delay_us            ; 40us delay
+  RET  
+
+
 
 
 ;=================================================================
@@ -224,7 +307,6 @@ l18: DEC R22
     BRNE l16
     RET
 
-
 delay_20ms: ;delay 20ms
   LDI R21, 255
   l3: LDI R22, 210
@@ -236,6 +318,26 @@ delay_20ms: ;delay 20ms
   DEC R21
   BRNE l3
   RET
+
+delay_ms:
+      LDI   R21, 40
+l24:   RCALL delay_us
+      DEC   R21
+      BRNE  l24
+      RET
+
+delay_short:
+      NOP
+      NOP
+      RET
+;------------------------
+delay_us:
+      LDI   R20, 90
+l23:  RCALL delay_short
+      DEC   R20
+      BRNE  l23
+      RET
+;-----------------------
 
 delay_timer0: ;50 usec delay via Timer 0
   ;---------------------------------------------------------
