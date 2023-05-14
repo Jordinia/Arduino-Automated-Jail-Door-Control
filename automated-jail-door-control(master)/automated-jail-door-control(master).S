@@ -11,18 +11,39 @@ main:
   RCALL init_serial
   RCALL I2C_init
   RCALL LCD_init
+  RCALL delay_sec  
+  RCALL LCD_start_message
   RCALL delay_sec
+
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0xC0  
+  RCALL LCD_sendChar
+  RCALL delay_ms
+
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'T'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'E'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'M'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'P'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, ':'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, ' '
+  RCALL LCD_sendChar
 
 again:
   RCALL delay_sec 
-  RCALL I2C_start    ; transmit START condition
   RCALL Read_DHT11   ; subroutine for read DHT11
+  RCALL LCD_disp_temp
 
-  .equ direct, 0     ; means data assigned from register
-  .equ mode, 0xFF    ; mode 0x00 = command write, mode 0xFF = data write
-  MOV R24, R19
-  RCALL LCD_sendChar  
-  
   RJMP again ; loop back
 
 ;=================================================================
@@ -52,6 +73,7 @@ Read_DHT11:
   RCALL DHT11_reading ;read integer temp (3rd byte of 40-bit data)
   MOV R19, R18 
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
+
   RCALL DHT11_print
   RET
 
@@ -115,123 +137,168 @@ DHT11_print:
 ;=================================================================
 ;     LCD Subroutines
 ;=================================================================
+LCD_start_message:
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'S'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'T'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'A'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'R'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'T'
+  RCALL LCD_sendChar
+  RET
 
-;------------------------------------------------------------
+;=================================================================
 LCD_init:
-  .equ mode, 0x00   ; mode 0x00 = command write, mode 0xFF = data write
-  .equ direct, 1    ; means data assigned from direct value (from 'value' symbol)
-  .equ value, 0x33
+  ;initialize LCD for 4-bit data
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x33   
   RCALL LCD_sendChar
   RCALL delay_ms
-
-  .equ value, 0x32
-  RCALL LCD_sendChar
-  RCALL delay_ms
-
-  .equ value, 0x28
-  RCALL LCD_sendChar
-  RCALL delay_ms
-
-  .equ value, 0x0C
-  RCALL LCD_sendChar
   
-  .equ value, 0x01
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x32
   RCALL LCD_sendChar
   RCALL delay_ms
-
-  .equ value, 0x06
+  ;-------------------------------------------------
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x28   ; LCD 2 lines, 5x7 matrix
   RCALL LCD_sendChar
+  RCALL delay_ms
+  ;-------------------------------------------------
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x0C   ; display ON, cursor OFF
+  RCALL LCD_sendChar
+  ;-------------------------------------------------
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x01   ; clear LCD
+  RCALL LCD_sendChar
+  RCALL delay_ms
+  ;-------------------------------------------------
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x06   ; shift cursor right
+  RCALL LCD_sendChar
+  ;-------------------------------------------------
   RET
 
+;==============================================================
+LCD_disp_temp:
 
-LCD_sendChar:
-  LDI R26, direct
-  SBRC R26, 1
-  LDI R23, value  ; R23 will store high-nibble
-
-  SBRS R26, 1
-  MOV R23, R24
+  MOV R23, R18
+  MOV R16, R23
+  RCALL ASCII_MSD
   
-  MOV R19, R23    ; R19 will store low-nibble
-  ANDI R23, 0xF0  ; get high-nibble
-  ANDI R19, 0x0F  ; get low-nibble
+  LDI R28, 1   ; mode = 1 for data 
+  MOV R27, R16
+  RCALL LCD_sendChar
 
-  ORI R23, mode
-  RCALL send4Bits
-  ORI R19, mode
-  RCALL send4Bits
-  RET
+  MOV R16, R18
+  RCALL ASCII_LSD
+  
+  LDI R28, 1   ; mode = 1 for data 
+  MOV R27, R16
+  RCALL LCD_sendChar
+
+  
+
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0xC6   
+  RCALL LCD_sendChar
 
 
-; USE R25 TO SEND DATA
+;==============================================================
 PCF8574_sendByte:
   RCALL I2C_start   ; send START condition
-  LDI R27, 0x40     ; send write address of PCF8574
+  LDI R24, 0x40     ; send write address of PCF8574
   RCALL I2C_write
-  MOV R27, R25      ; send data byte
+  MOV R24, R25      ; send data byte
   RCALL I2C_write
   RCALL I2C_stop    ; send STOP condition
   RET
-
+;=============================================================
 send4Bits:
-  MOV R25, R24
+  MOV R25, R26
   RCALL PCF8574_sendByte
-
-  MOV R23, R24
-  ORI R23, 0b00000100 
-  MOV R25, R23              ; EN = 1
-  RCALL PCF8574_sendByte        
-  RCALL delay_short         ; 0.45us delay
-
-  MOV R23, R24
-  ANDI R23, ~0b00000100 
-  MOV R25, R24              ; EN = 0
+  MOV R19, R26
+  ORI R19, 0b00000100
+  MOV R25, R19
   RCALL PCF8574_sendByte
-  RCALL delay_us            ; 40us delay
-  RET  
+  RCALL delay_short
 
+  MOV R19, R26
+  ANDI R19, ~(0b00000100)
+  MOV R25, R19
+  RCALL PCF8574_sendByte
+  RCALL delay_ms
+  RET
+
+;==============================================================
+LCD_sendChar:
+  MOV R18, R27
+  ANDI R27, 0xF0    ; get high-nibble
+  OR R27, R28       ; ORed with MODE
+  MOV R26, R27
+  RCALL send4Bits
+
+  MOV R27, R18
+  LSL R27
+  LSL R27
+  LSL R27
+  LSL R27
+  ANDI R27, 0xF0    ; get low-nibble
+
+  OR R27, R28       ; ORed with MODE
+  MOV R26, R27
+  RCALL send4Bits  
+  RET
+;=================================================================
 
 
 
 ;=================================================================
 ;     I2C Subroutines
 ;=================================================================
-
 I2C_init:
-  LDI R21, 0
-  STS TWSR, R21 ;prescaler = 0
-  LDI R21, 12 ;division factor = 12
-  STS TWBR, R21 ;SCK freq = 400kHz
-  LDI R21, (1<<TWEN)
-  STS TWCR, R21 ;enable TWI
-  RET
-
+    LDI   R21, 0
+    STS   TWSR, R21       ;prescaler = 0
+    LDI   R21, 72
+    STS   TWBR, R21       ;SCK freq = 100kHz
+    LDI   R21, (1<<TWEN)
+    STS   TWCR, R21       ;enable TWI
+    RET
+;==============================================================
 I2C_start:
-  LDI R21, (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)
-  STS TWCR, R21 ;transmit START condition
-  ;----------------------------------------------------------
-  wt1:LDS R21, TWCR
-  SBRS R21, TWINT ;TWI interrupt = 1?
-  RJMP wt1 ;no, wait for end of transmission
-  ;----------------------------------------------------------
-  RET
-
+    LDI   R21, (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)
+    STS   TWCR, R21       ;transmit START condition
+    ;----------------------------------------------------------
+wt1:LDS   R21, TWCR
+    SBRS  R21, TWINT      ;TWI interrupt = 1?
+    RJMP  wt1             ;no, wait for end of transmission
+    ;----------------------------------------------------------
+    RET
+;==============================================================
 I2C_write:
-  STS TWDR, R27 ;copy SLA+W into data register
-  LDI R21, (1<<TWINT)|(1<<TWEN)
-  STS TWCR, R21 ;transmit SLA+W
-  ;----------------------------------------------------------
-  wt2:LDS R21, TWCR
-  SBRS R21, TWINT
-  RJMP wt2 ;wait for end of transmission
-  ;----------------------------------------------------------
-  RET
-
+    STS   TWDR, R24       ;copy byte in R24 into data register
+    LDI   R21, (1<<TWINT)|(1<<TWEN)
+    STS   TWCR, R21       ;transmit byte
+    ;----------------------------------------------------------
+wt2:LDS   R21, TWCR
+    SBRS  R21, TWINT
+    RJMP  wt2             ;wait for end of transmission
+    ;----------------------------------------------------------
+    RET
+;==============================================================
 I2C_stop:
-  LDI R21, (1<<TWINT)|(1<<TWSTO)|(1<<TWEN)
-  STS TWCR, R21 ;transmit STOP condition
-  RET
-
+    LDI   R21, (1<<TWINT)|(1<<TWSTO)|(1<<TWEN)
+    STS   TWCR, R21       ;transmit STOP condition
+    RET
 
 ;=================================================================
 ;                   USART Subroutines
