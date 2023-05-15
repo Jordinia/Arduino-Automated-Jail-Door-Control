@@ -42,9 +42,56 @@ main:
 again:
   RCALL delay_sec 
   RCALL Read_DHT11   ; subroutine for read DHT11
+  RCALL Read_Photoresistor	; subroutine for reading photoresistor
   RCALL LCD_disp_temp
 
   RJMP again ; loop back
+
+;=================================================================
+;                     Read Photoresistor Data
+; Photoresistor Pin -> Analog Pin 0 (PC5)
+;=================================================================
+
+Read_Photoresistor:
+	CBI DDRC, 0 ; set pin PC5 as i/p for ADC0 
+	LDI R20, 0xC0 ; internal 2.56V, right-justified data, ADC0 
+	STS ADMUX, R20 
+	LDI R20, 0x87 ; enable ADC, ADC prescaler CLK/128 
+	STS ADCSRA, R20 
+
+read_ADC: 
+	LDI R20, 0xC7 ;set ADSC in ADCSRA to start conversion 
+	STS ADCSRA, R20 
+
+wait_ADC: 
+	LDS R21, ADCSRA ;check ADIF flag in ADCSRA 
+	SBRS R21, 4 ;skip jump when conversion is done (flag set) 
+	RJMP wait_ADC ;loop until ADIF flag is set 
+	
+	LDI R17, 0xD7 ;set ADIF flag again 
+	STS ADCSRA, R17 ;so that controller clears ADIF 
+	 
+	LDS R19, ADCH ;get high-byte result from ADCH 
+	RCALL determine_if_light
+	RET
+
+;=================================================================
+;  	For Determining the Photoresistor Intensity
+;	Uses R29 to store result 
+;=================================================================
+
+determine_if_light:
+	CPI R19, 0x01
+	BRSH open_door_locked
+
+open_door_unlocked:
+	LDI R29, 0b00001111
+	RJMP return_to_photoresistor
+open_door_locked:
+	LDI R29, 0b00000000
+
+return_to_photoresistor:
+	RET
 
 ;=================================================================
 ;                     Read DHT11 Data
