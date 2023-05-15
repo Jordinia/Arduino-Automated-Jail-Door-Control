@@ -47,11 +47,11 @@ again:
 
 ;=================================================================
 ;                     Read Photoresistor Data
-; Photoresistor Pin -> Analog Pin 0 (PC5)
+; Photoresistor Pin -> Analog Pin 0 (PC0)
 ;=================================================================
 
 Read_Photoresistor:
-	CBI DDRC, 0 ; set pin PC5 as i/p for ADC0 
+	CBI DDRC, 0 ; set pin PC0 as i/p for ADC0 
 	LDI R20, 0xC0 ; internal 2.56V, right-justified data, ADC0 
 	STS ADMUX, R20 
 	LDI R20, 0x87 ; enable ADC, ADC prescaler CLK/128 
@@ -79,14 +79,16 @@ wait_ADC:
 ;=================================================================
 
 determine_if_light:
-	CPI R19, 0x01
-	BRSH open_door_locked
+	CPI R19, 0x02
+	BRSH open_door_unlocked
 
-open_door_unlocked:
-	LDI R29, 0b00001111
-	RJMP return_to_photoresistor
 open_door_locked:
-	LDI R29, 0b00000000
+  CBI PORTD, 7 ; temporary solution
+	;LDI R29, 0b00000000
+	RJMP return_to_photoresistor
+open_door_unlocked:
+  SBI PORTD, 7 ; temporary solution
+	;LDI R29, 0b00001111
 
 return_to_photoresistor:
 	RET
@@ -257,7 +259,7 @@ LCD_disp_temp:
 ;==============================================================
 PCF8574_sendByte:
   RCALL I2C_start   ; send START condition
-  LDI R24, 0x40     ; send write address of PCF8574
+  LDI R24, 0x4E     ; send write address of PCF8574
   RCALL I2C_write
   MOV R24, R25      ; send data byte
   RCALL I2C_write
