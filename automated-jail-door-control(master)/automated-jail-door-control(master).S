@@ -9,6 +9,7 @@
 
 main:
   RCALL init_serial
+  RCALL init_ADC
   RCALL I2C_init
   RCALL LCD_init
   RCALL delay_sec  
@@ -16,33 +17,21 @@ main:
   RCALL delay_sec
 
   LDI R28, 0x00   ; mode = 0 for command 
-  LDI R27, 0xC0  
+  LDI R27, 0x02   ; return home  
   RCALL LCD_sendChar
   RCALL delay_ms
+  RCALL LCD_temp_message
 
-  LDI R28, 1   ; mode = 1 for data 
-  LDI R27, 'T'
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0xC0   ; move cursor to line 2  
   RCALL LCD_sendChar
-  LDI R28, 1   ; mode = 1 for data 
-  LDI R27, 'E'
-  RCALL LCD_sendChar
-  LDI R28, 1   ; mode = 1 for data 
-  LDI R27, 'M'
-  RCALL LCD_sendChar
-  LDI R28, 1   ; mode = 1 for data 
-  LDI R27, 'P'
-  RCALL LCD_sendChar
-  LDI R28, 1   ; mode = 1 for data 
-  LDI R27, ':'
-  RCALL LCD_sendChar
-  LDI R28, 1   ; mode = 1 for data 
-  LDI R27, ' '
-  RCALL LCD_sendChar
+  RCALL delay_ms  
+  RCALL LCD_light_message
 
 again:
   RCALL delay_sec 
   RCALL Read_DHT11   ; subroutine for read DHT11
-  RCALL Read_Photoresistor	; subroutine for reading photoresistor
+  RCALL read_ADC	   ; subroutine for reading photoresistor
   RJMP again ; loop back
 
 ;=================================================================
@@ -50,46 +39,143 @@ again:
 ; Photoresistor Pin -> Analog Pin 0 (PC0)
 ;=================================================================
 
-Read_Photoresistor:
-	CBI DDRC, 0 ; set pin PC0 as i/p for ADC0 
-	LDI R20, 0xC0 ; internal 2.56V, right-justified data, ADC0 
-	STS ADMUX, R20 
-	LDI R20, 0x87 ; enable ADC, ADC prescaler CLK/128 
-	STS ADCSRA, R20 
+init_ADC:
+  SBI DDRC, 0 ;set pin PC0 as i/p for ADC0
+  LDI R20, 0xC0 ;internal 2.56V, right-justified data, ADC0
+  STS ADMUX, R20
+  LDI R20, 0x87 ;enable ADC, ADC prescaler CLK/128
+  STS ADCSRA, R20
+  RET
+read_ADC:
+    LDI   R20, 0xC7       ;set ADSC in ADCSRA to start conversion
+    STS   ADCSRA, R20
+    ;-------------------------------------------------------------------
+wait_ADC:
+    LDS   R21, ADCSRA     ;check ADIF flag in ADCSRA
+    SBRS  R21, 4          ;skip jump when conversion is done (flag set)
+    RJMP  wait_ADC        ;loop until ADIF flag is set
+    ;------------------------------------------------------------------
+    LDI   R17, 0xD7       ;set ADIF flag again
+    STS   ADCSRA, R17     ;so that controller clears ADIF
+    ;------------------------------------------------------------------
+    LDS   R15, ADCL       ;get low-byte result from ADCL
+    LDS   R13, ADCH       ;get high-byte result from ADCH
 
-read_ADC: 
-	LDI R20, 0xC7 ;set ADSC in ADCSRA to start conversion 
-	STS ADCSRA, R20 
+    MOV   R12, R15        ; move ADCL result to unused register
+    RCALL LCD_disp_light  ; display to LCD
+    ;-----------------------------------------------------------------
+    RET
 
-wait_ADC: 
-	LDS R21, ADCSRA ;check ADIF flag in ADCSRA 
-	SBRS R21, 4 ;skip jump when conversion is done (flag set) 
-	RJMP wait_ADC ;loop until ADIF flag is set 
-	
-	LDI R17, 0xD7 ;set ADIF flag again 
-	STS ADCSRA, R17 ;so that controller clears ADIF 
-	 
-	LDS R19, ADCH ;get high-byte result from ADCH 
-	RCALL determine_if_light
-	RET
+print_ADC:
+l1_ADC: 
+    LDS   R17, UCSR0A
+    SBRS  R17, UDRE0      ;test data buffer if data can be sent
+    RJMP  l1_ADC
+    ;-----------------------------------------------------------------
+    STS   UDR0, R25       ;print ADC MSD on serial monitor
+    ;-----------------------------------------------------------------
+    PUSH  R16             ;store copy of ADCH in STACK register
+    ANDI  R16, 0xF0       ;mask & extract high-nibble
+    SWAP  R16             ;swap high-nibble with low-nibble 
+    SUBI  R16, -48        ;add 48 to byte to get ASCII char 0 to 9
+    MOV   R28, R16        ;store a copy of byte in R28
+    SUBI  R28, 58         ;subtract 58 from R28
+    BRPL  A_F_MSD_ADC         ;jump if result is +ve
+    ;-----------------------------------------------------------------
+l2_ADC: 
+    LDS   R17, UCSR0A
+    SBRS  R17, UDRE0      ;test data buffer if data can be sent
+    RJMP  l2_ADC
+    ;-----------------------------------------------------------------
+    STS   UDR0, R16       ;print ADC mid digit on serial monitor
+    ;-----------------------------------------------------------------
+    POP   R16             ;restore ADCH value from STACK register
+    ANDI  R16, 0x0F       ;mask & extract low-nibble
+    SUBI  R16, -48
+    MOV   R28, R16
+    SUBI  R28, 58
+    BRPL  A_F_LSD_ADC
+    ;-----------------------------------------------------------------
+l3_ADC: 
+    LDS   R17, UCSR0A
+    SBRS  R17, UDRE0      ;test data buffer if data can be sent
+    RJMP  l3_ADC
+    ;-----------------------------------------------------------------
+    STS   UDR0, R16       ;print ADC LSD on serial monitor
+    ;-----------------------------------------------------------------
+l4_ADC: 
+    LDS   R17, UCSR0A
+    SBRS  R17, UDRE0      ;test data buffer if data can be sent
+    RJMP  l4_ADC
+    ;-----------------------------------------------------------------
+    LDI   R18, 0x0A
+    STS   UDR0, R18       ;print newline on serial monitor    
+    ;-----------------------------------------------------------------
+l5_ADC: 
+    LDS   R17, UCSR0A
+    SBRS  R17, UDRE0      ;test data buffer if data can be sent
+    RJMP  l5_ADC
+    ;-----------------------------------------------------------------
+    LDI   R18, 0x0D
+    STS   UDR0, R18       ;print carriage return on serial monitor    
+    ;-----------------------------------------------------------------
+    RET
+;=====================================================================
+A_F_MSD_ADC:
+    SUBI  R16, -7        ;add 7 to byte to get ASCII chars A to F
+    RJMP  l2_ADC
+;---------------------------------------------------------------------
+A_F_LSD_ADC:
+    SUBI  R16, -7        ;add 7 to byte to get ASCII chars A to F
+    RJMP  l3_ADC
+;---------------------------------------------------------------------
+
 
 ;=================================================================
 ;  	For Determining the Photoresistor Intensity
 ;	Uses R29 to store result 
 ;=================================================================
 
-determine_if_light:
-	CPI R19, 0x02
-	BRSH open_door_unlocked
+;determine_if_light:
+;	CPI R19, 0x02
+;	BRSH open_door_unlocked
 
-open_door_locked:
-  CBI PORTD, 7 ; temporary solution
+;open_door_locked:
+ ; CBI PORTD, 7 ; temporary solution
 	;LDI R29, 0b00000000
-	RJMP return_to_photoresistor
-open_door_unlocked:
-  SBI PORTD, 7 ; temporary solution
+	;RJMP return_to_photoresistor
+;open_door_unlocked:
+ ; SBI PORTD, 7 ; temporary solution
 	;LDI R29, 0b00001111
 
+print_photoresistor:
+  MOV R16, R15
+  RCALL ASCII_LSD
+  RCALL LCD_buffer
+  STS UDR0, R16  
+
+  MOV R16, R19
+  RCALL ASCII_MSD
+  RCALL LCD_buffer 
+  STS UDR0, R16 
+
+  MOV R16, R19
+  RCALL ASCII_LSD 
+  RCALL LCD_buffer 
+  STS UDR0, R16 
+
+  ;--------------Print New line---------------
+  LDI R16, 0x0A 
+  RCALL LCD_buffer 
+  STS UDR0, R16 
+
+  ;--------------Print Carriage Return---------------
+  LDI R16, 0x0D 
+  RCALL LCD_buffer 
+  STS UDR0, R16 
+  
+  RET
+  
 return_to_photoresistor:
 	RET
 
@@ -118,10 +204,10 @@ Read_DHT11:
   RCALL DHT11_reading ;read integer humidity (1st byte of 40-bit data)
   RCALL DHT11_reading ;read decimal humidity (2nd byte of 40-bit data)
   RCALL DHT11_reading ;read integer temp (3rd byte of 40-bit data)
-  MOV R19, R18 
-  MOV R30, R18
+  ;MOV R19, R18    ; for serial monitor register
+  MOV R30, R18    ; for LCD data register
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
-  RCALL DHT11_print
+  ;RCALL DHT11_print
   RCALL LCD_disp_temp
   RET
 
@@ -201,6 +287,55 @@ LCD_start_message:
   LDI R28, 1   ; mode = 1 for data 
   LDI R27, 'T'
   RCALL LCD_sendChar
+  RCALL delay_sec
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x01   ; clear LCD
+  RCALL LCD_sendChar
+  RET
+;=================================================================
+LCD_temp_message:
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'T'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'E'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'M'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'P'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, ':'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, ' '
+  RCALL LCD_sendChar
+  RET
+
+LCD_light_message:
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'L'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'I'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'G'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'H'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, 'T'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, ':'
+  RCALL LCD_sendChar
+  LDI R28, 1   ; mode = 1 for data 
+  LDI R27, ' '
+  RCALL LCD_sendChar
   RET
 
 ;=================================================================
@@ -238,6 +373,9 @@ LCD_init:
 
 ;==============================================================
 LCD_disp_temp:
+  LDI R28, 0x00   ; mode = 0 for command 
+  LDI R27, 0x87   ; move cursor to line 1 position 6
+  RCALL LCD_sendChar
 
   MOV R14, R30    ; copy result to R14
   MOV R16, R14    
@@ -252,9 +390,33 @@ LCD_disp_temp:
   MOV R27, R16
   RCALL LCD_sendChar
 
+  RET
+
+LCD_disp_light:
   LDI R28, 0x00   ; mode = 0 for command 
-  LDI R27, 0xC6   ; move cursor to line 2 position 6
+  LDI R27, 0xC7   ; move cursor to line 2 position 6
   RCALL LCD_sendChar
+
+  LDI R20, 48
+  ADD R13, R20
+  LDI R28, 1      ; mode = 1 for data 
+  MOV R27, R13
+  RCALL LCD_sendChar
+
+  MOV R14, R12    ; copy result to R14
+  MOV R16, R14    
+  RCALL ASCII_MSD ; convert high-nibble to ASCII
+  LDI R28, 1      ; mode = 1 for data 
+  MOV R27, R16
+  RCALL LCD_sendChar
+  
+  MOV R16, R14
+  RCALL ASCII_LSD ; convert low-nibble to ASCII
+  LDI R28, 1      ; mode = 1 for data 
+  MOV R27, R16
+  RCALL LCD_sendChar
+
+  RET
 
 ;==============================================================
 PCF8574_sendByte:
