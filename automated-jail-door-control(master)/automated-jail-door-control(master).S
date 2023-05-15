@@ -43,8 +43,6 @@ again:
   RCALL delay_sec 
   RCALL Read_DHT11   ; subroutine for read DHT11
   RCALL Read_Photoresistor	; subroutine for reading photoresistor
-  RCALL LCD_disp_temp
-
   RJMP again ; loop back
 
 ;=================================================================
@@ -119,9 +117,10 @@ Read_DHT11:
   RCALL DHT11_reading ;read decimal humidity (2nd byte of 40-bit data)
   RCALL DHT11_reading ;read integer temp (3rd byte of 40-bit data)
   MOV R19, R18 
+  MOV R30, R18
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
-
   RCALL DHT11_print
+  RCALL LCD_disp_temp
   RET
 
 ;=================================================================
@@ -238,27 +237,22 @@ LCD_init:
 ;==============================================================
 LCD_disp_temp:
 
-  MOV R23, R18
-  MOV R16, R23
-  RCALL ASCII_MSD
-  
-  LDI R28, 1   ; mode = 1 for data 
+  MOV R14, R30    ; copy result to R14
+  MOV R16, R14    
+  RCALL ASCII_MSD ; convert high-nibble to ASCII
+  LDI R28, 1      ; mode = 1 for data 
   MOV R27, R16
   RCALL LCD_sendChar
-
-  MOV R16, R18
-  RCALL ASCII_LSD
   
-  LDI R28, 1   ; mode = 1 for data 
+  MOV R16, R14
+  RCALL ASCII_LSD ; convert low-nibble to ASCII
+  LDI R28, 1      ; mode = 1 for data 
   MOV R27, R16
   RCALL LCD_sendChar
-
-  
 
   LDI R28, 0x00   ; mode = 0 for command 
-  LDI R27, 0xC6   
+  LDI R27, 0xC6   ; move cursor to line 2 position 6
   RCALL LCD_sendChar
-
 
 ;==============================================================
 PCF8574_sendByte:
