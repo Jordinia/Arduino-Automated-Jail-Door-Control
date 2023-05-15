@@ -133,7 +133,7 @@ A_F_LSD_ADC:
 
 ;=================================================================
 ;  	For Determining the Photoresistor Intensity
-;	Uses R29 to store result 
+;	Uses REGISTER to store result 
 ;=================================================================
 
 ;determine_if_light:
@@ -142,11 +142,11 @@ A_F_LSD_ADC:
 
 ;open_door_locked:
  ; CBI PORTD, 7 ; temporary solution
-	;LDI R29, 0b00000000
+	;LDI REGISTER, 0b00000000
 	;RJMP return_to_photoresistor
 ;open_door_unlocked:
  ; SBI PORTD, 7 ; temporary solution
-	;LDI R29, 0b00001111
+	;LDI REGISTER, 0b00001111
 
 print_photoresistor:
   MOV R16, R15
@@ -205,7 +205,7 @@ Read_DHT11:
   RCALL DHT11_reading ;read decimal humidity (2nd byte of 40-bit data)
   RCALL DHT11_reading ;read integer temp (3rd byte of 40-bit data)
   ;MOV R19, R18    ; for serial monitor register
-  MOV R30, R18    ; for LCD data register
+  MOV R29, R18    ; for LCD data register
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
   ;RCALL DHT11_print
   RCALL LCD_disp_temp
@@ -377,7 +377,7 @@ LCD_disp_temp:
   LDI R27, 0x87   ; move cursor to line 1 position 6
   RCALL LCD_sendChar
 
-  MOV R14, R30    ; copy result to R14
+  MOV R14, R29    ; copy result to R14
   MOV R16, R14    
   RCALL ASCII_MSD ; convert high-nibble to ASCII
   LDI R28, 1      ; mode = 1 for data 
