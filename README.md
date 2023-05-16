@@ -6,7 +6,7 @@ The traditional way of jail door handling is often lacking in terms of automatio
 
 Automation with Arduino is meant as a solution to the challenges introduced by the old mechanism of jail door handling. The challenges are eliminating delays and inefficiencies that may affect the workflow inside the prison, increasing monitoring and security capabilities bys showing jail doors' status in real-time, and also maintaining the health and safety of prisoners and staffs.
 
-The old door handling mechanism is full of limitations. By developing this solution, we aim the increase productivity, security, and efficiency in terms of general operations inside prisons.
+The old door handling mechanism is full of limitations. By developing this solution, our aim is to increase productivity, security, and efficiency for prison-related operations.
 
 Solution
 
