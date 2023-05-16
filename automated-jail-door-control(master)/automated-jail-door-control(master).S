@@ -29,7 +29,7 @@ main:
   RCALL LCD_light_message
 
 again:
-  RCALL delay_sec 
+  RCALL delay_sec
   RCALL Read_DHT11   ; subroutine for read DHT11
   RCALL read_ADC	   ; subroutine for reading photoresistor
   RJMP again ; loop back
@@ -63,118 +63,28 @@ wait_ADC:
 
     MOV   R12, R15        ; move ADCL result to unused register
     RCALL LCD_disp_light  ; display to LCD
+    RCALL determine_if_light
     ;-----------------------------------------------------------------
     RET
-
-print_ADC:
-l1_ADC: 
-    LDS   R17, UCSR0A
-    SBRS  R17, UDRE0      ;test data buffer if data can be sent
-    RJMP  l1_ADC
-    ;-----------------------------------------------------------------
-    STS   UDR0, R25       ;print ADC MSD on serial monitor
-    ;-----------------------------------------------------------------
-    PUSH  R16             ;store copy of ADCH in STACK register
-    ANDI  R16, 0xF0       ;mask & extract high-nibble
-    SWAP  R16             ;swap high-nibble with low-nibble 
-    SUBI  R16, -48        ;add 48 to byte to get ASCII char 0 to 9
-    MOV   R28, R16        ;store a copy of byte in R28
-    SUBI  R28, 58         ;subtract 58 from R28
-    BRPL  A_F_MSD_ADC         ;jump if result is +ve
-    ;-----------------------------------------------------------------
-l2_ADC: 
-    LDS   R17, UCSR0A
-    SBRS  R17, UDRE0      ;test data buffer if data can be sent
-    RJMP  l2_ADC
-    ;-----------------------------------------------------------------
-    STS   UDR0, R16       ;print ADC mid digit on serial monitor
-    ;-----------------------------------------------------------------
-    POP   R16             ;restore ADCH value from STACK register
-    ANDI  R16, 0x0F       ;mask & extract low-nibble
-    SUBI  R16, -48
-    MOV   R28, R16
-    SUBI  R28, 58
-    BRPL  A_F_LSD_ADC
-    ;-----------------------------------------------------------------
-l3_ADC: 
-    LDS   R17, UCSR0A
-    SBRS  R17, UDRE0      ;test data buffer if data can be sent
-    RJMP  l3_ADC
-    ;-----------------------------------------------------------------
-    STS   UDR0, R16       ;print ADC LSD on serial monitor
-    ;-----------------------------------------------------------------
-l4_ADC: 
-    LDS   R17, UCSR0A
-    SBRS  R17, UDRE0      ;test data buffer if data can be sent
-    RJMP  l4_ADC
-    ;-----------------------------------------------------------------
-    LDI   R18, 0x0A
-    STS   UDR0, R18       ;print newline on serial monitor    
-    ;-----------------------------------------------------------------
-l5_ADC: 
-    LDS   R17, UCSR0A
-    SBRS  R17, UDRE0      ;test data buffer if data can be sent
-    RJMP  l5_ADC
-    ;-----------------------------------------------------------------
-    LDI   R18, 0x0D
-    STS   UDR0, R18       ;print carriage return on serial monitor    
-    ;-----------------------------------------------------------------
-    RET
-;=====================================================================
-A_F_MSD_ADC:
-    SUBI  R16, -7        ;add 7 to byte to get ASCII chars A to F
-    RJMP  l2_ADC
-;---------------------------------------------------------------------
-A_F_LSD_ADC:
-    SUBI  R16, -7        ;add 7 to byte to get ASCII chars A to F
-    RJMP  l3_ADC
-;---------------------------------------------------------------------
-
 
 ;=================================================================
 ;  	For Determining the Photoresistor Intensity
-;	Uses REGISTER to store result 
+;	  Uses REGISTER to store result 
 ;=================================================================
 
-;determine_if_light:
-;	CPI R19, 0x02
-;	BRSH open_door_unlocked
+determine_if_light:
+  MOV R31, R15
+  SBI DDRC, 2
+	CPI R31, 0x10
+	BRSH open_door_unlocked
 
-;open_door_locked:
- ; CBI PORTD, 7 ; temporary solution
-	;LDI REGISTER, 0b00000000
-	;RJMP return_to_photoresistor
-;open_door_unlocked:
- ; SBI PORTD, 7 ; temporary solution
-	;LDI REGISTER, 0b00001111
-
-print_photoresistor:
-  MOV R16, R15
-  RCALL ASCII_LSD
-  RCALL LCD_buffer
-  STS UDR0, R16  
-
-  MOV R16, R19
-  RCALL ASCII_MSD
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-
-  MOV R16, R19
-  RCALL ASCII_LSD 
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-
-  ;--------------Print New line---------------
-  LDI R16, 0x0A 
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-
-  ;--------------Print Carriage Return---------------
-  LDI R16, 0x0D 
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-  
-  RET
+open_door_locked:
+  CBR R30, 0
+  CBI PORTC, 2 ; temporary solution
+	RJMP return_to_photoresistor
+open_door_unlocked:
+  SBR R30, 0
+  SBI PORTC, 2 ; temporary solution
   
 return_to_photoresistor:
 	RET
