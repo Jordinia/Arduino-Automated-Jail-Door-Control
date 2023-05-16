@@ -16,7 +16,7 @@ To show real-time updates of the jail doors' status, we utilize light-emitting d
 
 To simulate an automatic open-close mechanism for the doors, motors are implemented to avoid any manual configuration. The doors are also connected to a light sensor circuit called light-dependent resistor (LDR) and a temperature sensor circuit (DHT11). The LDR detects night and day light where doors automatically close when there is little light (night) and open when there is much light (day). The DHT11 sensor scans for an overheat that implies fire inside the prison, in which case all doors automatically open.
 
-3. Hardware Design and Implementation Details
-4. Software Implementation Details
-5. Test Results and Performance Evaluation
-6. Conclusion and Future Work
+2. Hardware Design and Implementation Details
+3. Software Implementation Details
+4. Test Results and Performance Evaluation
+5. Conclusion and Future Work
