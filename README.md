@@ -18,10 +18,24 @@ To simulate an automatic open-close mechanism for the doors, motors are implemen
 
 ## Hardware Design and Implementation Details
 
+#### Proteus Design
 ![Proteus Design](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/finalproteus.jpg?raw=true)
+#### Hardware Design
+![Proteus Design](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/finalhardware.jpg?raw=true)
 
-![High temperature auto open](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/hightemp.gif?raw=true)
+## Test Results and Performance Evaluation
 
-3. Software Implementation Details
-4. Test Results and Performance Evaluation
-5. Conclusion and Future Work
+###  Features
+
+#### Open/Close of Individual Doors
+![Hopenclose](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/openclosedoorproteus.gif?raw=true)
+![High temperature auto open](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/openclosedoor.gif?raw=true)
+
+#### Emergency Close Door
+![Hopenclose](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/emergencyclose.gif?raw=true)
+
+#### Low Light Auto Close
+![Hopenclose](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/lowlightautoclose.gif?raw=true)
+
+#### High Aemperature Auto Open
+![High temperature auto open](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/hightempautoopen.gif?raw=true)
