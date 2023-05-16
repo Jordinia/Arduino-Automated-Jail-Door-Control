@@ -29,6 +29,7 @@ main:
   RCALL LCD_light_message
 
 again:
+  CBI PORTC, 2
   LDI R30, 0x00      ; clear fire_alarm flag
   LDI R31, 0x00      ; clear night flag
   RCALL delay_sec
@@ -50,6 +51,8 @@ init_IO:
   LDI R21, 0x01   ; input for button & output for LED pin B
   OUT DDRB, R21
 
+  SBI DDRC, 2     ; for LED emergency indicator
+
   LDI R21, 0x00
   OUT PORTD, R21  ; default condition (close all door)
   RET
@@ -66,6 +69,7 @@ read_button:
   RET
   
 emergency_trigger_open:
+  SBI PORTC, 2
   IN R12, PORTD
   SBRS R12, 6
   SBI PORTD, 7
@@ -80,6 +84,7 @@ emergency_trigger_open:
   RET
 
 emergency_trigger_close:
+  SBI PORTC, 2
   IN R12, PORTD
   SBRC R12, 6
   SBI PORTB, 0
@@ -228,6 +233,7 @@ determine_if_light:
 
 open_door_locked:
   RCALL emergency_trigger_close
+  SBI PORTC, 2
   LDI R31, 0xFF
 	RET
 open_door_unlocked:
@@ -272,6 +278,7 @@ fire_alert:
 
 fire_trigger_open:
   LDI R30, 0xFF
+  SBI PORTC, 2
   RCALL emergency_trigger_open
   RET
 
