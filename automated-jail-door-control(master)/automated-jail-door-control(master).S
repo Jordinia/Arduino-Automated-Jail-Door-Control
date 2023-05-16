@@ -8,7 +8,7 @@
 .global main
 
 main:
-  RCALL init_serial
+  RCALL init_IO
   RCALL init_ADC
   RCALL I2C_init
   RCALL LCD_init
@@ -30,9 +30,136 @@ main:
 
 again:
   RCALL delay_sec
+  RCALL read_button
   RCALL Read_DHT11   ; subroutine for read DHT11
   RCALL read_ADC	   ; subroutine for reading photoresistor
   RJMP again ; loop back
+
+;=================================================================
+;       I/O Subroutines
+;=================================================================
+init_IO:
+  LDI R21, 0xFF   ; output for door LED & motor pin D
+  OUT DDRD, R21
+
+  LDI R21, 0x01   ; input for button & output for LED pin B
+  OUT DDRB, R21
+
+  LDI R21, 0x00
+  OUT PORTD, R21  ; default condition (close all door)
+  RET
+
+read_button:
+  SBIC PINB, 5
+  RCALL emergency_trigger
+  SBIC PINB, 4
+  RCALL door_A_trigger
+  SBIC PINB, 3
+  RCALL door_B_trigger
+  SBIC PINB, 2
+  RCALL door_C_trigger
+  RET
+  
+
+emergency_trigger:
+  IN R12, PORTD
+  SBRC R12, 6
+  SBI PORTB, 0
+  SBRC R12, 3
+  SBI PORTD, 5
+  SBRC R12, 0
+  SBI PORTD, 2
+  RCALL delay_sec
+  CBI PORTB, 0
+  LDI R31, 0x00
+  OUT PORTD, R31
+  RET
+
+
+
+door_A_trigger:
+  IN R12, PORTD
+  RCALL motor_A_trigger
+  RCALL delay_sec
+  RCALL motor_stop
+  LDI R31, 0b01000000
+  EOR R12, R31
+  OUT PORTD, R12
+  RET
+
+door_B_trigger:
+  IN R12, PORTD
+  RCALL motor_B_trigger
+  LDI R31, 0b00001000
+  EOR R12, R31
+  OUT PORTD, R12
+  RET
+
+door_C_trigger:
+  IN R12, PORTD
+  RCALL motor_C_trigger
+  LDI R31, 0b00000001
+  EOR R12, R31
+  OUT PORTD, R12
+  RET
+
+motor_A_trigger:
+  SBRS R12, 6
+  RCALL motor_A_open
+  SBRC R12, 6
+  RCALL motor_A_close
+  RET
+motor_A_close:
+  SBI PORTB, 0
+  RET
+motor_A_open:
+  SBI PORTD, 7
+  RET
+
+
+motor_B_trigger:
+  SBRS R12, 3
+  RCALL motor_B_open
+  SBRC R12, 3
+  RCALL motor_B_close
+  RET
+motor_B_close:
+  SBI PORTD, 5
+  RCALL delay_sec
+  CBI PORTD, 5
+  RET
+motor_B_open:
+  SBI PORTD, 4
+  RCALL delay_sec
+  CBI PORTD, 4
+  RET
+
+motor_C_trigger:
+  SBRS R12, 0
+  RCALL motor_C_open
+  SBRC R12, 0
+  RCALL motor_C_close
+  RET
+motor_C_close:
+  SBI PORTD, 2
+  RCALL delay_sec
+  CBI PORTD, 2
+  RET
+motor_C_open:
+  SBI PORTD, 1
+  RCALL delay_sec
+  CBI PORTD, 1
+  RET
+
+  
+motor_stop:
+  CBI PORTB, 0
+  CBI PORTD, 1
+  CBI PORTD, 2
+  CBI PORTD, 4
+  CBI PORTD, 5
+  CBI PORTD, 7
+  RET
 
 ;=================================================================
 ;                     Read Photoresistor Data
@@ -119,6 +246,16 @@ Read_DHT11:
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
   ;RCALL DHT11_print
   RCALL LCD_disp_temp
+  RCALL fire_alert
+  RET
+
+fire_alert:
+  MOV R31, R18
+  CPI R31, 0x28
+  BRSH door_open
+  RET
+
+door_open:
   RET
 
 ;=================================================================
