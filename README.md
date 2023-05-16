@@ -8,6 +8,12 @@ Automation with Arduino is meant as a solution to the challenges introduced by t
 
 The old door handling mechanism is full of limitations. By developing this solution, we aim the increase productivity, security, and efficiency in terms of general operations inside prisons.
 
+Solution
+
+The Arduino is responsible for automating tasks and mechanisms for jail door operations. Each jail door has a button connected to the microcontroller to control the opened-or-closed status. A special button to trigger a collective action towards all doors is also implemented for ease of use to the operator and can be scaled for future implementations, such as detecting abnormal conditions.
+
+To show real-time updates of the jail doors' status, we utilize light-emitting diodes (LEDs) as a visual indicator
+
 3. Hardware Design and Implementation Details
 4. Software Implementation Details
 5. Test Results and Performance Evaluation
