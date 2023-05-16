@@ -1,6 +1,6 @@
 # Arduino-Automated-Jail-Door-Control
 
-1. Introduction to the Problem and Solution
+## Introduction to the Problem and Solution
 
 The traditional way of jail door handling is often lacking in terms of automation, security, and efficiency which are crucial for creating an ideal environment for prisoners and prison staffs. Operation of jail doors by human labor is vulnerable to errors and requires more effort and time than actually needed. Realizing the problem, we decided to dedicate our project to solve said problem by implementing an Arduino-centric design whcih includes master-slave configurations, buttons, an LCD with serial communication protocols, motors, and others. The objective is to maximize security and efficiency while providing some information about the status of the jail doors in real-time.
 
@@ -8,7 +8,7 @@ Automation with Arduino is meant as a solution to the challenges introduced by t
 
 The old door handling mechanism is full of limitations. By developing this solution, our aim is to increase productivity, security, and efficiency for prison-related operations.
 
-Solution
+### Solution
 
 The Arduino is responsible for automating tasks and mechanisms for jail door operations. Each jail door has a button connected to the microcontroller to control the opened-or-closed status. A special button to trigger a collective action towards all doors is also implemented for ease of use to the operator and can be scaled for future implementations, such as detecting abnormal conditions.
 
@@ -16,7 +16,9 @@ To show real-time updates of the jail doors' status, we utilize light-emitting d
 
 To simulate an automatic open-close mechanism for the doors, motors are implemented to avoid any manual configuration. The doors are also connected to a light sensor circuit called light-dependent resistor (LDR) and a temperature sensor circuit (DHT11). The LDR detects night and day light where doors automatically close when there is little light (night) and open when there is enough light (day). The DHT11 sensor scans for an overheat that implies fire inside the prison, in which case all doors automatically open.
 
-2. Hardware Design and Implementation Details
+## Hardware Design and Implementation Details
+
+![alt text](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/tree/main/assets/finalproteus.jpg?raw=true)
 3. Software Implementation Details
 4. Test Results and Performance Evaluation
 5. Conclusion and Future Work
