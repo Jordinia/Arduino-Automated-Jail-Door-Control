@@ -37,5 +37,5 @@ To simulate an automatic open-close mechanism for the doors, motors are implemen
 #### Low Light Auto Close
 ![Hopenclose](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/lowlightautoclose.gif?raw=true)
 
-#### High Aemperature Auto Open
+#### High Temperature Auto Open
 ![High temperature auto open](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/hightempautoopen.gif?raw=true)
