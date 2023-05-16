@@ -29,10 +29,15 @@ main:
   RCALL LCD_light_message
 
 again:
+  LDI R30, 0x00      ; clear fire_alarm flag
+  LDI R31, 0x00      ; clear night flag
   RCALL delay_sec
-  RCALL read_button
-  RCALL Read_DHT11   ; subroutine for read DHT11
-  RCALL read_ADC	   ; subroutine for reading photoresistor
+  RCALL Read_DHT11   ; subroutines for read DHT11
+  RCALL read_ADC	   ; subroutines for reading photoresistor
+  
+  SBRC R31, 7
+  RJMP again  
+  RCALL read_button  ; subroutines for button input & it's output
   RJMP again ; loop back
 
 ;=================================================================
@@ -51,7 +56,7 @@ init_IO:
 
 read_button:
   SBIC PINB, 5
-  RCALL emergency_trigger
+  RCALL emergency_trigger_close
   SBIC PINB, 4
   RCALL door_A_trigger
   SBIC PINB, 3
@@ -60,8 +65,21 @@ read_button:
   RCALL door_C_trigger
   RET
   
+emergency_trigger_open:
+  IN R12, PORTD
+  SBRS R12, 6
+  SBI PORTD, 7
+  SBRS R12, 3
+  SBI PORTD, 4
+  SBRS R12, 0
+  SBI PORTD, 1
+  RCALL delay_sec
+  LDI R31, 0xFF
+  OUT PORTD, R31
+  RCALL motor_stop
+  RET
 
-emergency_trigger:
+emergency_trigger_close:
   IN R12, PORTD
   SBRC R12, 6
   SBI PORTB, 0
@@ -71,11 +89,9 @@ emergency_trigger:
   SBI PORTD, 2
   RCALL delay_sec
   CBI PORTB, 0
-  LDI R31, 0x00
-  OUT PORTD, R31
+  LDI R30, 0x00
+  OUT PORTD, R30
   RET
-
-
 
 door_A_trigger:
   IN R12, PORTD
@@ -161,6 +177,9 @@ motor_stop:
   CBI PORTD, 7
   RET
 
+
+
+
 ;=================================================================
 ;                     Read Photoresistor Data
 ; Photoresistor Pin -> Analog Pin 0 (PC0)
@@ -190,6 +209,9 @@ wait_ADC:
 
     MOV   R12, R15        ; move ADCL result to unused register
     RCALL LCD_disp_light  ; display to LCD
+
+    SBRC R31, 1
+    RJMP again
     RCALL determine_if_light
     ;-----------------------------------------------------------------
     RET
@@ -201,20 +223,16 @@ wait_ADC:
 
 determine_if_light:
   MOV R31, R15
-  SBI DDRC, 2
 	CPI R31, 0x10
 	BRSH open_door_unlocked
 
 open_door_locked:
-  CBR R30, 0
-  CBI PORTC, 2 ; temporary solution
-	RJMP return_to_photoresistor
-open_door_unlocked:
-  SBR R30, 0
-  SBI PORTC, 2 ; temporary solution
-  
-return_to_photoresistor:
+  RCALL emergency_trigger_close
+  LDI R31, 0xFF
 	RET
+open_door_unlocked:
+  RET
+  
 
 ;=================================================================
 ;                     Read DHT11 Data
@@ -241,21 +259,20 @@ Read_DHT11:
   RCALL DHT11_reading ;read integer humidity (1st byte of 40-bit data)
   RCALL DHT11_reading ;read decimal humidity (2nd byte of 40-bit data)
   RCALL DHT11_reading ;read integer temp (3rd byte of 40-bit data)
-  ;MOV R19, R18    ; for serial monitor register
   MOV R29, R18    ; for LCD data register
   RCALL DHT11_reading ;read decimal temp (4th byte of 40-bit data)
-  ;RCALL DHT11_print
   RCALL LCD_disp_temp
   RCALL fire_alert
   RET
 
 fire_alert:
-  MOV R31, R18
-  CPI R31, 0x28
-  BRSH door_open
+  CPI R29, 0x28
+  BRSH fire_trigger_open
   RET
 
-door_open:
+fire_trigger_open:
+  LDI R30, 0xFF
+  RCALL emergency_trigger_open
   RET
 
 ;=================================================================
@@ -285,34 +302,6 @@ w5:
   DEC R17 ;decrement counter
   BRNE w4 ;go back & detect next bit
   RET ;return to calling subroutine
-
-
-;=================================================================
-;   Print DHT11 to S. Monitor
-;=================================================================
-DHT11_print:
-  MOV R16, R19
-  RCALL ASCII_MSD
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-
-  MOV R16, R19
-  RCALL ASCII_LSD 
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-
-  ;--------------Print New line---------------
-  LDI R16, 0x0A 
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-
-  ;--------------Print Carriage Return---------------
-  LDI R16, 0x0D 
-  RCALL LCD_buffer 
-  STS UDR0, R16 
-  
-  RET
-
 
 
 ;=================================================================
@@ -617,7 +606,7 @@ l8: DEC R22
 delay_sec: ;1s delay
     LDI R20, 255
 l16: LDI R21, 255
-l17: LDI R22, 80
+l17: LDI R22, 60
 l18: DEC R22
     BRNE l18
     DEC R21
