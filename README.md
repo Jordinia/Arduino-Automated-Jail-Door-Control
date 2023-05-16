@@ -14,7 +14,7 @@ The Arduino is responsible for automating tasks and mechanisms for jail door ope
 
 To show real-time updates of the jail doors' status, we utilize light-emitting diodes (LEDs) as a visual indicator to each door. When a door is opened, the LED representing the door turns on and when it is closed, it turns off. This increases the monitoring capabilities and awareness of staffs and guards.
 
-To simulate an automatic open-close mechanism for the doors, motors are implemented to avoid any manual configuration. The doors are also connected to a light sensor circuit called light-dependent resistor (LDR) and a temperature sensor circuit (DHT11). The LDR detects night and day light where doors automatically close when there is little light (night) and open when there is much light (day). The DHT11 sensor scans for an overheat that implies fire inside the prison, in which case all doors automatically open.
+To simulate an automatic open-close mechanism for the doors, motors are implemented to avoid any manual configuration. The doors are also connected to a light sensor circuit called light-dependent resistor (LDR) and a temperature sensor circuit (DHT11). The LDR detects night and day light where doors automatically close when there is little light (night) and open when there is enough light (day). The DHT11 sensor scans for an overheat that implies fire inside the prison, in which case all doors automatically open.
 
 2. Hardware Design and Implementation Details
 3. Software Implementation Details
