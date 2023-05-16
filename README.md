@@ -18,7 +18,10 @@ To simulate an automatic open-close mechanism for the doors, motors are implemen
 
 ## Hardware Design and Implementation Details
 
-![alt text](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/tree/main/assets/finalproteus.jpg?raw=true)
+![Proteus Design](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/finalproteus.jpg?raw=true)
+
+![High temperature auto open](https://github.com/Jordinia/Arduino-Automated-Jail-Door-Control/blob/main/assets/hightemp.gif?raw=true)
+
 3. Software Implementation Details
 4. Test Results and Performance Evaluation
 5. Conclusion and Future Work
